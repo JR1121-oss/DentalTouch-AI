@@ -1,0 +1,246 @@
+'use client';
+// Next.js App Router 환경에서 사용자 입력을 받거나 useState 같은 리액트 훅(Hook)을 사용하는 클라이언트 사이드 컴포넌트임을 선언합니다.
+import React, { useState } from 'react';
+import { Stethoscope, AlertTriangle, CheckCircle, Clock, Send, ShieldAlert } from 'lucide-react';
+// lucide-react: 청진기, 경고, 시계 등 직관적인 UI 아이콘을 불러옵니다.
+
+export default function Home() {
+  const [step, setStep] = useState(1);  // 현재 문진 단계 (1: 부위 선택, 2: AI 대화, 3: 약물 체크)
+  const [selectedTooth, setSelectedTooth] = useState<string | null>(null);  // 환자가 터치한 치아 부위
+  const [chatLog, setChatLog] = useState<{ sender: string; text: string }[]>([]);  // 챗봇과 주고받은 대화 배열
+  const [userInput, setUserInput] = useState('');  // 입력창에 작성 중인 텍스트
+  const [medication, setMedication] = useState<string[]>([]);  // 환자가 추가한 복용 약물 목록
+  const [medInput, setMedInput] = useState('');  // 약물 입력창 텍스트
+  const [isCompleted, setIsCompleted] = useState(false);  // 문진 전체 완료 여부 (true 시 최종 결과 화면 전환)
+
+  // 치통 패턴 분석 가상 알고리즘 결과 - AI가 가상 분석해 낸 통증 패턴 결과
+  const [painAnalysis, setPainAnalysis] = useState('');
+
+  // 1단계: 치아 위치 선택
+  const handleToothSelect = (tooth: string) => {
+    setSelectedTooth(tooth);
+    setChatLog([
+      { sender: 'ai', text: `안녕하세요! AI 심층 예진 도우미입니다. [${tooth}] 부위가 불편하시군요. 정확한 통증 양상을 파악하기 위해 몇 가지 질문을 드릴게요.` },
+      { sender: 'ai', text: '언제부터 아프셨나요? 찬물이나 뜨거운 음식을 드실 때 통증이 더 심해지시나요?' }
+    ]);
+    setStep(2);
+  };
+
+  // 2단계: AI 대화형 심층 문진
+  const handleSendMessage = () => {
+    if (!userInput.trim()) return;
+
+    const newLog = [...chatLog, { sender: 'user', text: userInput }];
+    setChatLog(newLog);
+    setUserInput('');
+
+    // 통증 알고리즘 가상 반응
+    setTimeout(() => {
+      if (newLog.length === 3) {
+        // 대화가 진행되면 AI가 맥락을 이어받아 연쇄 질문 투척
+        setChatLog((prev) => [
+          ...prev,
+          { sender: 'ai', text: '가만히 계실 때도 찌릿하거나 욱신거리는 통증이 지속되나요, 아니면 씹을 때만 아프신가요?' }
+        ]);
+      } else if (newLog.length >= 5) {
+        // 일정 수준 이상 문진이 누적되면 치통 패턴 분석 완료 후 3단계(약물 체크)로 유도
+        setPainAnalysis('자극 시 찰나의 날카로운 통증 및 식사 시 국소 통증 (치아 균열 또는 급성 치수염 의심 패턴)');
+        setChatLog((prev) => [
+          ...prev,
+          { sender: 'ai', text: '통증 패턴 분석이 완료되었습니다. 마지막으로, 안전한 치과 시술을 위해 현재 복용 중이신 약물이 있으신가요?' }
+        ]);
+        setStep(3);
+      }
+    }, 600);
+  };
+
+  // 3단계: 약물 입력
+  const handleAddMedication = () => {
+    // handleAddMedication : 아스피린, 골다공증약 등 환자가 입력한 약물을 배열에 뱃지(tag) 형태로 연달아 추가
+    if (medInput.trim()) {
+      setMedication([...medication, medInput.trim()]);
+      setMedInput('');
+    }
+  };
+
+  const handleFinish = () => {
+    // handleFinish : isCompleted 상태를 true로 바꿔 화면 전체를 '의료진 전달용 요약 차트'로 전환
+    setIsCompleted(true);
+  };
+
+  return (
+    <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col font-sans">
+      {/* 헤더 */}
+      <header className="bg-blue-600 text-white p-4 shadow-md flex justify-between items-center">
+        <div className="flex items-center gap-2">
+          <Stethoscope className="w-6 h-6" />
+          <h1 className="text-xl font-bold tracking-tight">DentalTouch AI</h1>
+        </div>
+        <span className="text-xs bg-blue-700 px-2.5 py-1 rounded-full flex items-center gap-1">
+          <Clock className="w-3 h-3" /> 대기시간 단축 스마트 문진
+        </span>
+      </header>
+
+      <main className="flex-1 max-w-md w-full mx-auto p-4 flex flex-col gap-4">
+        {!isCompleted ? (
+          <>
+            {/* 진행 단계 표시 */}
+            <div className="flex justify-between items-center text-xs font-medium text-slate-500 bg-white p-3 rounded-lg border">
+              <span className={step >= 1 ? 'text-blue-600 font-bold' : ''}>1. 부위 선택</span>
+              <span>&gt;</span>
+              <span className={step >= 2 ? 'text-blue-600 font-bold' : ''}>2. 심층 AI 대화</span>
+              <span>&gt;</span>
+              <span className={step >= 3 ? 'text-blue-600 font-bold' : ''}>3. 약물 체크</span>
+            </div>
+
+            {/* STEP 1: 아픈 치아 위치 선택 */}  // step == 1 : 그리드 형태의 치아 위치 선택 버튼들 노출
+            {step === 1 && ( 
+              <div className="bg-white p-5 rounded-xl border shadow-sm flex flex-col items-center">
+                <h2 className="text-base font-bold mb-2">아프거나 불편한 부위를 선택해 주세요</h2>
+                <p className="text-xs text-slate-500 mb-6">치아 위치를 터치하시면 심층 문진이 시작됩니다.</p>
+
+                <div className="grid grid-cols-2 gap-4 w-full max-w-xs">
+                  {['상악 우측 (어금니)', '상악 좌측 (어금니)', '하악 우측 (어금니)', '하악 좌측 (어금니)', '앞니 부위'].map((tooth) => (
+                    <button
+                      key={tooth}
+                      onClick={() => handleToothSelect(tooth)}
+                      className="p-4 bg-slate-100 hover:bg-blue-50 hover:border-blue-500 border rounded-xl text-sm font-medium transition active:scale-95"
+                    >
+                      🦷 {tooth}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* STEP 2: AI 대화형 심층 문진 */}  // step >= 2: 카카오톡/메신저 스타일의 AI 대화 렌더링. chat.sender가 'user'면 우측 파란 말풍선, 'ai'면 좌측 회색 말풍선으로 배치합니다.
+            {step >= 2 && (
+              <div className="bg-white rounded-xl border shadow-sm flex-1 flex flex-col h-[420px]">
+                <div className="p-3 border-b bg-slate-50 text-xs font-semibold text-slate-600 flex justify-between">
+                  <span>선택 부위: {selectedTooth}</span>
+                  <span className="text-blue-600">AI 통증 패턴 분석 중...</span>
+                </div>
+
+                <div className="flex-1 p-3 overflow-y-auto flex flex-col gap-2">
+                  {chatLog.map((chat, idx) => (
+                    <div
+                      key={idx}
+                      className={`max-w-[80%] p-3 rounded-2xl text-xs leading-relaxed ${
+                        chat.sender === 'user'
+                          ? 'bg-blue-600 text-white self-end rounded-br-none'
+                          : 'bg-slate-100 text-slate-800 self-start rounded-bl-none'
+                      }`}
+                    >
+                      {chat.text}
+                    </div>
+                  ))}
+                </div>
+
+                {step === 2 && (
+                  <div className="p-2 border-t flex gap-2">
+                    <input
+                      type="text"
+                      value={userInput}
+                      onChange={(e) => setUserInput(e.target.value)}
+                      onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
+                      placeholder="증상을 입력하세요 (예: 씹을 때 찌릿해요)"
+                      className="flex-1 text-xs border rounded-lg px-3 py-2 outline-none focus:border-blue-500"
+                    />
+                    <button
+                      onClick={handleSendMessage}
+                      className="bg-blue-600 text-white p-2 rounded-lg hover:bg-blue-700 transition"
+                    >
+                      <Send className="w-4 h-4" />
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* STEP 3: 복용 약물 체크 */}  // step === 3: 하단에 복용 약물 입력 박스와 뱃지 영역이 펼쳐지며 [문진 완료] 버튼 생성.
+            {step === 3 && (
+              <div className="bg-white p-4 rounded-xl border shadow-sm flex flex-col gap-3">
+                <h3 className="text-xs font-bold flex items-center gap-1 text-slate-800">
+                  <ShieldAlert className="w-4 h-4 text-amber-500" /> 복용 중인 약물 확인 (치과 시술 안전용)
+                </h3>
+                <p className="text-[11px] text-slate-500">
+                  항응고제, 아스피린, 골다공증약 등 복용 중이신 약을 적어주세요.
+                </p>
+
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={medInput}
+                    onChange={(e) => setMedInput(e.target.value)}
+                    placeholder="예: 아스피린, 아반디아 등"
+                    className="flex-1 text-xs border rounded-lg px-3 py-2 outline-none"
+                  />
+                  <button
+                    onClick={handleAddMedication}
+                    className="bg-slate-800 text-white px-3 py-2 rounded-lg text-xs hover:bg-slate-700"
+                  >
+                    추가
+                  </button>
+                </div>
+
+                {medication.length > 0 && (
+                  <div className="flex flex-wrap gap-1 mt-1">
+                    {medication.map((med, i) => (
+                      <span key={i} className="text-[11px] bg-amber-50 text-amber-700 border border-amber-200 px-2 py-0.5 rounded-full">
+                        💊 {med}
+                      </span>
+                    ))}
+                  </div>
+                )}
+
+                <button
+                  onClick={handleFinish}
+                  className="w-full bg-blue-600 text-white font-bold py-3 rounded-xl text-xs mt-2 hover:bg-blue-700 transition shadow"
+                >
+                  문진 완료 및 의료진 전달
+                </button>
+              </div>
+            )}
+          </>
+        ) : (
+          /* 완료 페이지 (의료진에게 전달될 최종 뷰) */
+          <div className="bg-white p-5 rounded-xl border shadow-md flex flex-col gap-4">
+            <div className="text-center">
+              <CheckCircle className="w-12 h-12 text-green-500 mx-auto mb-2" />
+              <h2 className="text-lg font-bold">문진이 완료되었습니다</h2>
+              <p className="text-xs text-slate-500">대기실에서 잠시만 기다려주세요. 진료실로 안내해 드리겠습니다.</p>
+            </div>
+
+            <div className="border-t pt-3 flex flex-col gap-2 text-xs">
+              <div className="font-bold text-slate-700">[의료진 전달용 요약 차트]</div>
+              <div className="bg-slate-50 p-3 rounded-lg border">
+                <p><strong>• 위치:</strong> {selectedTooth}</p>
+                <p className="mt-1"><strong>• AI 통증 패턴:</strong> <span className="text-blue-700">{painAnalysis}</span></p>
+                <p className="mt-1">
+                  <strong>• 약물 주의사항:</strong>{' '}
+                  {medication.length > 0 ? (
+                    <span className="text-amber-600 font-medium">{medication.join(', ')} (시술 전 출혈/골괴사 리스크 체크 요망)</span>
+                  ) : (
+                    '특이사항 없음'
+                  )}
+                </p>
+              </div>
+            </div>
+
+            <button
+              onClick={() => {
+                setStep(1);
+                setIsCompleted(false);
+                setChatLog([]);
+                setMedication([]);
+              }}
+              className="text-xs text-slate-400 underline mt-2 text-center"
+            >
+              처음으로 돌아가기
+            </button>
+          </div>
+        )}
+      </main>
+    </div>
+  );
+}
