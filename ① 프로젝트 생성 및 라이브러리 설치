@@ -1,8 +1,8 @@
-# Next.js 프로젝트 생성
+// Next.js 프로젝트 생성
 npx create-next-app@latest dentaltouch --typescript --tailwind --eslint
 
-# 프로젝트 이동
+// 프로젝트 이동
 cd dentaltouch
 
-# 아이콘 사용을 위한 lucide-react 설치
+// 아이콘 사용을 위한 lucide-react 설치
 npm install lucide-react
